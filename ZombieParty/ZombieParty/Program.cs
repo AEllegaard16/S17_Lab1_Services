@@ -39,6 +39,7 @@ builder.Services.AddDbContext<ZombiePartyDbContext>(options =>
 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")).UseLazyLoadingProxies());
 builder.Services.AddScoped(typeof(IServiceBaseAsync<>), typeof(ServiceBaseAsync<>));
 builder.Services.AddScoped<IZombieTypeService, ZombieTypeService>();
+builder.Services.AddScoped<IZombieService, ZombieService>();
 
 var app = builder.Build();
 
