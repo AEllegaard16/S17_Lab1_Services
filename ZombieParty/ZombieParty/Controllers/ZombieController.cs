@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ZombieParty.Models;
 using ZombieParty.Models.Data;
+using ZombieParty.Services;
 using ZombieParty.Utility;
 using ZombieParty.ViewModels;
 
@@ -11,54 +12,58 @@ namespace ZombieParty.Controllers
     public class ZombieController : Controller
     {
         private ZombiePartyDbContext _baseDonnees { get; set; }
+        private IZombieService _serviceZ { get; set; }
+        private IZombieTypeService _serviceZT { get; set; }
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public ZombieController(ZombiePartyDbContext baseDonnees, IWebHostEnvironment webHostEnvironment)
+        public ZombieController(ZombiePartyDbContext baseDonnees, IWebHostEnvironment webHostEnvironment, IZombieService serviceZ, IZombieTypeService serviceZT)
         {
             _baseDonnees = baseDonnees;
             _webHostEnvironment = webHostEnvironment;
+            _serviceZ = serviceZ;
+            _serviceZT = serviceZT;
         }
 
         public async Task<IActionResult> Index()
         {
-            List<Zombie> zombiesList = await _baseDonnees.Zombies.OrderBy(z => z.Name).Include(z => z.ZombieType).ToListAsync();
+            List<Zombie> zombiesList = await _serviceZ.GetAllIndexAsync();
 
             return View(zombiesList);
         }
 
-        public async Task<IActionResult> StrongestZombies()
-        {
-            List<Zombie> zombiesList = await _baseDonnees.Zombies.Where(z => z.Point >= 8).OrderBy(z => z.Name).Include(z => z.ZombieType).ToListAsync();
+        //        public async Task<IActionResult> StrongestZombies()
+        //        {
+        //            List<Zombie> zombiesList = await _baseDonnees.Zombies.Where(z => z.Point >= 8).OrderBy(z => z.Name).Include(z => z.ZombieType).ToListAsync();
 
-            return View(zombiesList);
-        }
+        //            return View(zombiesList);
+        //        }
 
-        public async Task<IActionResult> Delete(int id)
-        {
-            Zombie? zombie = await _baseDonnees.Zombies.Include(z => z.ZombieType).FirstOrDefaultAsync(z => z.Id == id);
-            if (zombie == null)
-            {
-                return NotFound();
-            }
+        //        public async Task<IActionResult> Delete(int id)
+        //        {
+        //            Zombie? zombie = await _baseDonnees.Zombies.Include(z => z.ZombieType).FirstOrDefaultAsync(z => z.Id == id);
+        //            if (zombie == null)
+        //            {
+        //                return NotFound();
+        //            }
 
-            return View(zombie);
-        }
+        //            return View(zombie);
+        //        }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeletePost(int id)
-        {
-            Zombie? zombie = await _baseDonnees.Zombies.FindAsync(id);
-            if (zombie == null)
-            {
-                return NotFound();
-            }
+        //        [HttpPost]
+        //        [ValidateAntiForgeryToken]
+        //        public async Task<IActionResult> DeletePost(int id)
+        //        {
+        //            Zombie? zombie = await _baseDonnees.Zombies.FindAsync(id);
+        //            if (zombie == null)
+        //            {
+        //                return NotFound();
+        //            }
 
-            _baseDonnees.Zombies.Remove(zombie);
-            await _baseDonnees.SaveChangesAsync();
-            TempData[AppConstants.Success] = $"Zombie {zombie.Name} terminated";
-            return RedirectToAction("Index");
-        }
+        //            _baseDonnees.Zombies.Remove(zombie);
+        //            await _baseDonnees.SaveChangesAsync();
+        //            TempData[AppConstants.Success] = $"Zombie {zombie.Name} terminated";
+        //            return RedirectToAction("Index");
+        //        }
 
         public async Task<IActionResult> Edit(int id)
         {
@@ -108,8 +113,7 @@ namespace ZombieParty.Controllers
                     zombieVM.Zombie.Image = zombieVM.OldImage;
                 }
 
-                _baseDonnees.Zombies.Update(zombieVM.Zombie);
-                await _baseDonnees.SaveChangesAsync();
+                await _serviceZ.EditAsync(zombieVM.Zombie);
                 TempData[AppConstants.Success] = $"Zombie {zombieVM.Zombie.Name} has been modified";
                 return this.RedirectToAction("Index");
             }
@@ -125,12 +129,7 @@ namespace ZombieParty.Controllers
         public IActionResult Create()
         {
             ZombieVM zombieVM = new ZombieVM();
-            zombieVM.ZombieTypeSelectList = _baseDonnees.ZombieTypes.Select(t => new SelectListItem
-            {
-                Text = t.TypeName,
-                Value = t.Id.ToString()
-            }).OrderBy(t => t.Text);
-
+            zombieVM.ZombieTypeSelectList = _serviceZT.ListZombieTypeDisponible();
             return View(zombieVM);
         }
 
@@ -138,6 +137,12 @@ namespace ZombieParty.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(ZombieVM zombieVM)
         {
+            if (_serviceZ.ZombieNameExist(zombieVM.Zombie.Name))
+            {
+                zombieVM.ZombieTypeSelectList = _serviceZT.ListZombieTypeDisponible();
+                return View(zombieVM);
+            }
+
             //Si le modèle est valide le zombie est ajouté et nous sommes redirigé vers index.
             if (ModelState.IsValid)
             {
@@ -164,9 +169,7 @@ namespace ZombieParty.Controllers
                     // sans le path relatif (le path devra être ajouté dans la View)
                     zombieVM.Zombie.Image = fileName + extenstion;
                 }
-
-                await _baseDonnees.Zombies.AddAsync(zombieVM.Zombie);
-                await _baseDonnees.SaveChangesAsync();
+                await _serviceZ.CreateAsync(zombieVM.Zombie);
                 TempData[AppConstants.Success] = $"Zombie {zombieVM.Zombie.Name} added";
                 return this.RedirectToAction("Index");
             }

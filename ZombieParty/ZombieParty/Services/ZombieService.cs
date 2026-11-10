@@ -15,5 +15,15 @@ namespace ZombieParty.Services
         {
             return await _dbContext.Zombies.Where(z => z.ZombieTypeId == zombieTypeId).ToListAsync();
         }
+
+        public async Task<List<Zombie>> GetAllIndexAsync()
+        {
+            return await _dbContext.Zombies.OrderBy(z => z.Name).Include(z => z.ZombieType).ToListAsync();
+        }
+
+        public bool ZombieNameExist(string name)
+        {
+            return _dbContext.Zombies.Any(z => z.Name == name);
+        }
     }
 }

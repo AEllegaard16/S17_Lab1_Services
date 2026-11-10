@@ -1,4 +1,6 @@
 ﻿using System.Xml.Linq;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
 using ZombieParty.Models;
 using ZombieParty.Models.Data;
 
@@ -32,6 +34,18 @@ namespace ZombieParty.Services
             {
                 await base.DeleteAsync(id);
             }
+        }
+
+        public IEnumerable<SelectListItem> ListZombieTypeDisponible()
+        {
+            var zombieTypesDispos = _dbContext.ZombieTypes.Where(zt => zt.IsDisponible)
+                .Select(zt => new SelectListItem
+                {
+                    Text = zt.TypeName,
+                    Value = zt.Id.ToString()
+                }
+                ).ToList();
+            return zombieTypesDispos;
         }
     }
 }

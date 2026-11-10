@@ -1,9 +1,11 @@
-﻿using ZombieParty.Models;
+﻿using Microsoft.AspNetCore.Mvc.Rendering;
+using ZombieParty.Models;
 
 namespace ZombieParty.Services
 {
     public interface IZombieTypeService : IServiceBaseAsync<ZombieType>
     {
-        bool HasAssociatedZombies(ZombieType entity);
+        public bool HasAssociatedZombies(ZombieType entity);
+        public IEnumerable<SelectListItem> ListZombieTypeDisponible();
     }
 }
